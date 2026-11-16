@@ -185,7 +185,7 @@ Part of the DEPI capstone. The transaction cleaning, EDA and market basket analy
  
 ## Author
  
-**Sherif** · [GitHub](https://github.com/your-username) · [LinkedIn](https://linkedin.com/in/your-profile)
+**Sherif** · [GitHub](https://github.com/SherifAzb) · [LinkedIn](https://linkedin.com/in/sherifazb)
  
 ---
  
