@@ -14,11 +14,23 @@ Built as part of the DEPI capstone, *Retail Intelligence & Market Basket Analysi
 <!-- Replace with a real screenshot or GIF. A 10 second screen recording of the camera tab does more than any paragraph below. -->
 <!-- ![demo](docs/demo.gif) -->
  
-**Live demo:** `<your-app>.streamlit.app` (add the link here)
- 
+<br>
+<p align="center">
+  <a href="https://retail-deep-dtsqqqgs7tjwhargz4cccz.streamlit.app/">
+    <img alt="Try the live demo" src="https://img.shields.io/badge/%F0%9F%9A%80%20TRY%20THE%20LIVE%20DEMO-retail--deep.streamlit.app-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white">
+  </a>
+</p>
+<p align="center">
+  <b>👉 <a href="https://retail-deep-dtsqqqgs7tjwhargz4cccz.streamlit.app/">retail-deep-dtsqqqgs7tjwhargz4cccz.streamlit.app</a> 👈</b>
+  <br>
+  <sub>Open it on your phone and use the camera tab. Streamlit puts free apps to sleep, so the first load can take a few seconds.</sub>
+</p>
+<br>
 ---
  
 ## What it does
+ 
+> 🚀 **Want to see it first?** [Open the live app](https://retail-deep-dtsqqqgs7tjwhargz4cccz.streamlit.app/) and point your camera at any packaged product.
  
 1. You take a photo or upload one.
 2. Gemini looks at it and picks **one** product from a fixed catalog of 133 items, returns a confidence score and a bounding box.
