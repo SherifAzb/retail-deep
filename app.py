@@ -1,21 +1,26 @@
 import os
 from typing import List
-import gradio as gr
+import streamlit as st
 from PIL import Image, ImageDraw
 from pydantic import BaseModel
 from google import genai
 from google.genai import types
 from recommend import answer, names
 
+st.set_page_config(page_title="RetailDeep", layout="centered")
+st.title("🛒 RetailDeep Assistant")
+
 MODEL = 'gemini-3.5-flash'
 MIN_CONFIDENCE = 0.6
 ALIASES = {'P035': 'P034'}
 
 key = os.environ.get('GEMINI_API_KEY', '')
-if not key and os.path.exists('gemini_key.txt'):
-    key = open('gemini_key.txt', encoding='utf-8-sig').read().strip()
+if not key and 'GEMINI_API_KEY' in st.secrets:
+    key = st.secrets['GEMINI_API_KEY']
 if not key:
-    raise SystemExit('حط الـ API key في ملف gemini_key.txt جنب الكود، أو في متغير GEMINI_API_KEY')
+    st.error('حط الـ API key في إعدادات Secrets باسم GEMINI_API_KEY')
+    st.stop()
+
 client = genai.Client(api_key=key)
 
 catalog = '\n'.join(f'{pid}: {n}' for pid, n in names.drop(list(ALIASES)).items())
@@ -78,27 +83,33 @@ def draw(image, box, color):
     return shown
 
 
-def recognize(image):
-    if image is None:
-        return None, 'مفيش صورة', ''
-    image = image.convert('RGB')
-    try:
-        r = ask_gemini(image)
-    except Exception as e:
-        return image, f'مشكلة في الاتصال بـ Gemini: {e}', ''
+tab1, tab2 = st.tabs(["📷 الكاميرا", "📁 رفع صورة"])
+with tab1:
+    cam_img = st.camera_input("صور المنتج")
+with tab2:
+    up_img = st.file_uploader("ارفع صورة المنتج", type=["jpg", "jpeg", "png", "webp"])
+
+img_file = cam_img if cam_img is not None else up_img
+
+if img_file is not None:
+    image = Image.open(img_file).convert('RGB')
+    with st.spinner("جاري التعرف على المنتج..."):
+        try:
+            r = ask_gemini(image)
+        except Exception as e:
+            st.error(f"مشكلة في الاتصال بـ Gemini: {e}")
+            st.stop()
+
     if not r.found:
-        return image, 'مفيش منتج في الصورة', ''
-    box = to_pixels(r.box_2d, image.size)
-    pid = ALIASES.get(r.product_id, r.product_id)
-    if pid not in names.index or r.confidence < MIN_CONFIDENCE:
-        return draw(image, box, 'red'), f'منتج مش معروف (Gemini شايف: {r.seen})', ''
-    return draw(image, box, 'lime'), f'{names[pid]}  ←  Gemini شايف: {r.seen}  ({r.confidence:.0%})', answer(pid)
-
-
-app = gr.Interface(
-    fn=recognize,
-    inputs=gr.Image(sources=['webcam', 'upload'], type='pil'),
-    outputs=[gr.Image(label='المنتج'), gr.Textbox(label='التعرف على المنتج'), gr.Textbox(label='التوصية والعروض')],
-    flagging_mode='never',
-)
-app.launch(server_name="0.0.0.0", server_port=int(os.environ.get("PORT", 7860)))
+        st.image(image, caption="المنتج")
+        st.warning("مفيش منتج في الصورة")
+    else:
+        box = to_pixels(r.box_2d, image.size)
+        pid = ALIASES.get(r.product_id, r.product_id)
+        if pid not in names.index or r.confidence < MIN_CONFIDENCE:
+            st.image(draw(image, box, 'red'), caption="المنتج")
+            st.error(f"منتج مش معروف (Gemini شايف: {r.seen})")
+        else:
+            st.image(draw(image, box, 'lime'), caption="المنتج")
+            st.success(f"{names[pid]}  ←  Gemini شايف: {r.seen}  ({r.confidence:.0%})")
+            st.info(answer(pid))
