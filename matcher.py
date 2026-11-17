@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from google.genai import types
 from recommend import names
 
-MODEL = 'gemini-3.8-flash'
+MODELS = ['gemini-3.1-flash-lite', 'gemini-3.5-flash']
 MIN_CONFIDENCE = 0.5
 ALIASES = {'P035': 'P034'}
 
@@ -35,13 +35,19 @@ class Result(BaseModel):
 
 def ask_gemini(client, image):
     small = image.copy()
-    small.thumbnail((1024, 1024))
-    resp = client.models.generate_content(
-        model=MODEL,
-        contents=[small, PROMPT],
-        config=types.GenerateContentConfig(response_mime_type='application/json', response_schema=Result, temperature=0),
-    )
-    return Result.model_validate_json(resp.text)
+    small.thumbnail((768, 768))
+    last = None
+    for model in MODELS:
+        try:
+            resp = client.models.generate_content(
+                model=model,
+                contents=[small, PROMPT],
+                config=types.GenerateContentConfig(response_mime_type='application/json', response_schema=Result, temperature=0),
+            )
+            return Result.model_validate_json(resp.text)
+        except Exception as e:
+            last = e
+    raise last
 
 
 def to_pixels(box, size):
