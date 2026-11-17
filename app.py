@@ -1,3 +1,4 @@
+import base64
 import io
 import os
 from html import escape
@@ -29,6 +30,10 @@ CSS = """
 .rd .chips{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .rd .chip{padding:5px 14px;border-radius:99px;background:rgba(128,128,128,.2);font-weight:600}
 .rd .plus{opacity:.55;font-weight:700}
+.rd .pair{display:flex;align-items:center;justify-content:center;gap:18px;flex-wrap:wrap;margin-bottom:6px}
+.rd .tile{display:flex;flex-direction:column;align-items:center;gap:8px;min-width:120px}
+.rd .tile .pic{width:120px;height:120px;border-radius:14px;background:rgba(128,128,128,.12);display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:3.6rem}
+.rd .tile .pic img{width:100%;height:100%;object-fit:contain}
 .rd .price{display:flex;flex-wrap:wrap;align-items:baseline;gap:14px;margin-top:14px}
 .rd .old{text-decoration:line-through;opacity:.6}
 .rd .new{font-size:1.6rem;font-weight:700;color:#2ea043}
@@ -61,6 +66,26 @@ def pct(x):
 
 def money(x):
     return f'{ltr(f"{x:,.0f}")} ج'
+
+
+def pic(pid):
+    p = image(pid)
+    if not p:
+        return emoji(pid)
+    if p.startswith('http'):
+        return f'<img src="{escape(p)}">'
+    ext = os.path.splitext(p)[1].lower().lstrip('.')
+    mime = {'jpg': 'jpeg', 'jpeg': 'jpeg', 'png': 'png', 'webp': 'webp'}.get(ext, 'jpeg')
+    return f'<img src="data:image/{mime};base64,{b64(p)}">'
+
+
+@st.cache_data(show_spinner=False)
+def b64(path):
+    return base64.b64encode(open(path, 'rb').read()).decode()
+
+
+def tile(pid, name):
+    return f'<div class="tile"><div class="pic">{pic(pid)}</div><span class="chip">{ltr(name)}</span></div>'
 
 
 def notice(text, kind=''):
@@ -142,7 +167,7 @@ def show_product(pid):
             base = info(pid)['price']
             saved = x['price'] - x['offer']
             html(
-                f'<div class="card"><div class="chips"><span class="chip">{ltr(names[pid])}</span><span class="plus">+</span><span class="chip">{ltr(x["name"])}</span></div>'
+                f'<div class="card"><div class="pair">{tile(pid, names[pid])}<span class="plus">+</span>{tile(x["id"], x["name"])}</div>'
                 f'<div class="price"><span class="old">{money(base + x["price"])}</span><span class="new">{money(base + x["offer"])}</span>'
                 f'<span class="save">وفّر {money(saved)} ({pct(x["discount"])})</span></div>'
                 f'<div class="note">الخصم على {ltr(x["name"])} لما تاخده مع {ltr(names[pid])}</div></div>'
