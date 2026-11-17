@@ -3,6 +3,8 @@ import pandas as pd
 rec = pd.read_csv('product_recommendations.csv')
 off = pd.read_csv('product_offers.csv').set_index('Product_ID')
 bun = pd.read_csv('product_bundles.csv', encoding='utf-8-sig')
+catalog = pd.read_csv('products_catalog.csv', encoding='utf-8-sig').set_index('Product_ID')
+HIDDEN = ['P035']
 names = rec.drop_duplicates('Product_ID').set_index('Product_ID')['Product']
 top_sellers = off.sort_values('Lines', ascending=False).head(3)['Product'].tolist()
 
@@ -28,3 +30,19 @@ def bundles(product_id):
             'discount': float(b['Suggested_Discount']),
         })
     return out
+
+
+def categories():
+    return sorted(catalog.drop(HIDDEN, errors='ignore')['Category'].unique())
+
+
+def products_in(category=None):
+    c = catalog.drop(HIDDEN, errors='ignore')
+    if category:
+        c = c[c['Category'] == category]
+    return c.sort_values('Product').index.tolist()
+
+
+def info(product_id):
+    c = catalog.loc[product_id]
+    return {'category': c['Category'], 'price': float(c['Price'])}
