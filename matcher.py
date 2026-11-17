@@ -33,18 +33,22 @@ class Result(BaseModel):
     box_2d: List[int]
 
 
+def call_model(client, model, image):
+    resp = client.models.generate_content(
+        model=model,
+        contents=[image, PROMPT],
+        config=types.GenerateContentConfig(response_mime_type='application/json', response_schema=Result, temperature=0),
+    )
+    return Result.model_validate_json(resp.text)
+
+
 def ask_gemini(client, image):
     small = image.copy()
     small.thumbnail((768, 768))
     last = None
     for model in MODELS:
         try:
-            resp = client.models.generate_content(
-                model=model,
-                contents=[small, PROMPT],
-                config=types.GenerateContentConfig(response_mime_type='application/json', response_schema=Result, temperature=0),
-            )
-            return Result.model_validate_json(resp.text)
+            return call_model(client, model, small)
         except Exception as e:
             last = e
     raise last
