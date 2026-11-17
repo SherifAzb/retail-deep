@@ -6,7 +6,7 @@ from PIL import Image
 from google import genai
 from google.genai import types
 from matcher import ask_gemini, decide
-from recommend import names, suggestions, bundles, offer, top_sellers, categories, products_in, info
+from recommend import names, suggestions, bundles, offer, top_sellers, categories, products_in, info, image, emoji
 
 st.set_page_config(page_title="RetailDeep", page_icon="🛒", layout="centered")
 
@@ -92,6 +92,12 @@ def identify(data):
 
 def show_product(pid):
     meta = info(pid)
+    img = image(pid)
+    if img:
+        _, mid, _ = st.columns([1, 2, 1])
+        mid.image(img, use_container_width=True)
+    else:
+        html(f'<div style="text-align:center;font-size:7rem;line-height:1.2;margin:8px 0">{emoji(pid)}</div>')
     html(f'<div class="hero"><div class="lb">{ltr(meta["category"])} · السعر {money(meta["price"])}</div><div class="nm">{ltr(names[pid])}</div></div>')
 
     html('<div class="sec">🛍️ غالباً بيشتروا معاه</div>')
