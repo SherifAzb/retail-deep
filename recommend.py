@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 
 rec = pd.read_csv('product_recommendations.csv')
@@ -46,3 +47,55 @@ def products_in(category=None):
 def info(product_id):
     c = catalog.loc[product_id]
     return {'category': c['Category'], 'price': float(c['Price'])}
+
+
+IMG_DIR = 'images'
+EXTS = ('.jpg', '.jpeg', '.png', '.webp')
+
+
+def image(product_id):
+    """Local file images/<Product_ID>.<ext> first, then optional Image_URL column in the catalogue, else None."""
+    for e in EXTS:
+        p = os.path.join(IMG_DIR, product_id + e)
+        if os.path.exists(p):
+            return p
+    if 'Image_URL' in catalog.columns:
+        u = catalog.loc[product_id, 'Image_URL']
+        if isinstance(u, str) and u.startswith('http'):
+            return u
+    return None
+
+
+CAT_EMOJI = {'Baby & Kids': '👶', 'Bakery': '🥐', 'Beverages': '🥤', 'Dairy': '🥛', 'Eggs & Poultry': '🍗', 'Frozen': '🧊',
+             'Fruits & Vegetables': '🥬', 'Grains & Pasta': '🌾', 'Household': '🧴', 'Oils & Sauces': '🫙',
+             'Personal Care': '🧼', 'Snacks': '🍿', 'Sugar & Spices': '🧂'}
+# first match wins, so keep the specific words before the general ones
+KW_EMOJI = [
+    ('formula', '🍼'), ('diaper', '👶'), ('wipes', '🧻'), ('baby snack', '🍪'),
+    ('croissant', '🥐'), ('pita', '🫓'), ('baladi', '🫓'), ('bread', '🍞'), ('buns', '🍔'), ('cake', '🍰'), ('biscuit', '🍪'), ('rusk', '🍞'), ('pastry', '🥮'),
+    ('apple juice', '🧃'), ('orange juice', '🧃'), ('instant coffee', '☕'), ('coffee', '☕'), ('energy', '⚡'), ('hibiscus', '🥤'), ('malt', '🥤'),
+    ('soda', '🥤'), ('tea', '🍵'), ('water', '💧'),
+    ('butter', '🧈'), ('cheddar', '🧀'), ('cheese', '🧀'), ('mozzarella', '🧀'), ('cream', '🥛'), ('ghee', '🧈'), ('yogurt', '🥣'), ('labneh', '🥣'), ('milk', '🥛'),
+    ('nuggets', '🍗'), ('burger', '🍔'), ('sausage', '🌭'), ('chicken', '🍗'), ('eggs', '🥚'), ('beef', '🥩'), ('turkey', '🦃'),
+    ('fries', '🍟'), ('okra', '🥬'), ('peas', '🫛'), ('pizza', '🍕'), ('spinach', '🥬'), ('ice cream', '🍨'),
+    ('apples', '🍎'), ('bananas', '🍌'), ('carrots', '🥕'), ('cucumber', '🥒'), ('garlic', '🧄'), ('grapes', '🍇'), ('lemons', '🍋'), ('lettuce', '🥬'),
+    ('onions', '🧅'), ('oranges', '🍊'), ('peppers', '🫑'), ('potatoes', '🥔'), ('strawberr', '🍓'), ('tomatoes', '🍅'),
+    ('rice', '🍚'), ('bulgur', '🌾'), ('chickpeas', '🫘'), ('cornflakes', '🥣'), ('couscous', '🍚'), ('fava', '🫘'), ('flour', '🌾'), ('lentils', '🫘'),
+    ('oats', '🥣'), ('pasta', '🍝'), ('spaghetti', '🍝'),
+    ('air freshener', '🌸'), ('foil', '📦'), ('bleach', '🧴'), ('dish soap', '🧽'), ('softener', '🧴'), ('floor', '🧹'), ('laundry', '🧺'), ('paper towels', '🧻'),
+    ('sponges', '🧽'), ('tissues', '🤧'), ('trash', '🗑️'),
+    ('olive oil', '🫒'), ('oil', '🛢️'), ('hot sauce', '🌶️'), ('ketchup', '🍅'), ('mayonnaise', '🥚'), ('mustard', '🟡'), ('pickles', '🥒'), ('tahini', '🫙'),
+    ('tomato', '🍅'), ('vinegar', '🍶'),
+    ('body soap', '🧼'), ('deodorant', '🧴'), ('face wash', '🧴'), ('conditioner', '🧴'), ('hand wash', '🧼'), ('razor', '🪒'), ('pads', '🩹'), ('shampoo', '🧴'),
+    ('toothbrush', '🪥'), ('toothpaste', '🪥'),
+    ('candy', '🍬'), ('chips', '🥔'), ('chocolate', '🍫'), ('cookies', '🍪'), ('dates', '🌴'), ('nuts', '🥜'), ('popcorn', '🍿'), ('pretzels', '🥨'), ('wafer', '🍫'),
+    ('pepper', '🌶️'), ('cinnamon', '🟤'), ('cocoa', '🍫'), ('cumin', '🌿'), ('honey', '🍯'), ('jam', '🍓'), ('salt', '🧂'), ('spice', '🌶️'), ('sugar', '🍬'), ('vanilla', '🌼'),
+]
+
+
+def emoji(product_id):
+    name = catalog.loc[product_id, 'Product'].lower()
+    for k, e in KW_EMOJI:
+        if k in name:
+            return e
+    return CAT_EMOJI.get(catalog.loc[product_id, 'Category'], '🛒')
