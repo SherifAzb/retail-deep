@@ -24,7 +24,7 @@ if not key:
 
 @st.cache_resource
 def get_client(k):
-    return genai.Client(api_key=k, http_options=types.HttpOptions(timeout=30000))
+    return genai.Client(api_key=k, http_options=types.HttpOptions(timeout=45000))
 
 
 client = get_client(key)
