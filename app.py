@@ -1,3 +1,4 @@
+import io
 import os
 from html import escape
 import streamlit as st
@@ -78,10 +79,15 @@ if not key:
 
 @st.cache_resource
 def get_client(k):
-    return genai.Client(api_key=k, http_options=types.HttpOptions(timeout=45000))
+    return genai.Client(api_key=k, http_options=types.HttpOptions(timeout=20000))
 
 
 client = get_client(key)
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def identify(data):
+    return ask_gemini(client, Image.open(io.BytesIO(data)).convert('RGB'))
 
 tab1, tab2 = st.tabs(["📷 الكاميرا", "📁 رفع صورة"])
 with tab1:
@@ -95,7 +101,7 @@ if img_file is not None:
     image = Image.open(img_file).convert('RGB')
     with st.spinner("جاري التعرف على المنتج..."):
         try:
-            r = ask_gemini(client, image)
+            r = identify(img_file.getvalue())
         except Exception as e:
             notice(f'حصلت مشكلة في الاتصال، جرّب تاني بعد شوية.<br><small>{ltr(e)}</small>', 'err')
             st.stop()
