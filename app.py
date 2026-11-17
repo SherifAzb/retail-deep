@@ -6,7 +6,7 @@ from PIL import Image
 from google import genai
 from google.genai import types
 from matcher import ask_gemini, decide
-from recommend import names, suggestions, bundles, offer, top_sellers
+from recommend import names, suggestions, bundles, offer, top_sellers, categories, products_in, info
 
 st.set_page_config(page_title="RetailDeep", page_icon="🛒", layout="centered")
 
@@ -36,6 +36,7 @@ CSS = """
 .rd .note{opacity:.7;font-size:.85rem;margin-top:8px}
 .rd .msg{border-radius:12px;padding:14px 18px;margin:14px 0;border:1px solid rgba(128,128,128,.3);background:rgba(128,128,128,.12)}
 .rd .msg.warn{border-color:rgba(240,165,0,.5);background:rgba(240,165,0,.12)}
+div[data-testid="stWidgetLabel"] p{text-align:right;width:100%;direction:rtl}
 .rd .msg.err{border-color:rgba(230,60,60,.5);background:rgba(230,60,60,.12)}
 </style>
 """
@@ -89,15 +90,45 @@ client = get_client(key)
 def identify(data):
     return ask_gemini(client, Image.open(io.BytesIO(data)).convert('RGB'))
 
-tab1, tab2 = st.tabs(["📷 الكاميرا", "📁 رفع صورة"])
-with tab1:
-    cam_img = st.camera_input("صوّر المنتج")
-with tab2:
-    up_img = st.file_uploader("ارفع صورة المنتج", type=["jpg", "jpeg", "png", "webp"])
+def show_product(pid):
+    meta = info(pid)
+    html(f'<div class="hero"><div class="lb">{ltr(meta["category"])} · السعر {money(meta["price"])}</div><div class="nm">{ltr(names[pid])}</div></div>')
 
-img_file = cam_img if cam_img is not None else up_img
+    html('<div class="sec">🛍️ غالباً بيشتروا معاه</div>')
+    sug = suggestions(pid)
+    if sug:
+        rows = ''.join(f'<div class="row"><div class="nm">{ltr(s["name"])}</div><div class="bar"><i style="width:{s["share"]*100:.0f}%"></i></div><div class="pct">{pct(s["share"])}</div></div>' for s in sug)
+        html(rows + f'<div class="note">النسبة من الفواتير اللي فيها {ltr(names[pid])} وكمان المنتج ده</div>')
+    else:
+        chips = '<span class="plus">·</span>'.join(f'<span class="chip">{ltr(n)}</span>' for n in top_sellers)
+        html('<div class="msg">مفيش منتج بيتشرى معاه بشكل واضح</div>' + f'<div class="note">الأكتر طلباً عندنا:</div><div class="chips">{chips}</div>')
 
-if img_file is not None:
+    html('<div class="sec">🎁 الباقات المقترحة</div>')
+    bnd = bundles(pid)
+    if bnd:
+        for b in bnd:
+            chips = '<span class="plus">+</span>'.join(f'<span class="chip">{ltr(n)}</span>' for n in b['items'])
+            saved = b['regular'] - b['offer']
+            html(
+                f'<div class="card"><div class="chips">{chips}</div>'
+                f'<div class="price"><span class="old">{money(b["regular"])}</span><span class="new">{money(b["offer"])}</span>'
+                f'<span class="save">وفّر {money(saved)} ({pct(b["discount"])})</span></div>'
+                f'<div class="note">بيتشتروا مع بعض في {pct(b["share"])} من فواتير {ltr(names[pid])}</div></div>'
+            )
+        html('<div class="note">السعر بعد الخصم تقدير مبني على متوسط الخصم اللي اتعمل فعلاً على المنتجات دي</div>')
+    else:
+        html('<div class="msg">مفيش باقة واضحة للمنتج ده</div>')
+
+    o = offer(pid)
+    html('<div class="sec">🏷️ العروض</div>')
+    html(f'<div class="card">المنتج ده بيتباع بخصم في حوالي {pct(o["share"])} من المرات، ومتوسط الخصم {pct(o["avg"])}</div>')
+
+
+MODES = ['🛒 اختار من القايمة', '📷 كاميرا', '📁 رفع صورة']
+mode = st.radio('طريقة الاختيار', MODES, horizontal=True, label_visibility='collapsed')
+
+
+def recognize(img_file):
     image = Image.open(img_file).convert('RGB')
     with st.spinner("جاري التعرف على المنتج..."):
         try:
@@ -114,33 +145,20 @@ if img_file is not None:
     elif status == 'unsure':
         notice('الصورة مش واضحة، جرّب تصوّر المنتج من قرب وإضاءة أحسن', 'warn')
     else:
-        html(f'<div class="hero"><div class="lb">المنتج</div><div class="nm">{ltr(names[pid])}</div></div>')
+        show_product(pid)
 
-        html('<div class="sec">🛍️ غالباً بيشتروا معاه</div>')
-        sug = suggestions(pid)
-        if sug:
-            rows = ''.join(f'<div class="row"><div class="nm">{ltr(s["name"])}</div><div class="bar"><i style="width:{s["share"]*100:.0f}%"></i></div><div class="pct">{pct(s["share"])}</div></div>' for s in sug)
-            html(rows + f'<div class="note">النسبة من الفواتير اللي فيها {ltr(names[pid])} وكمان المنتج ده</div>')
-        else:
-            chips = '<span class="plus">·</span>'.join(f'<span class="chip">{ltr(n)}</span>' for n in top_sellers)
-            html('<div class="msg">مفيش منتج بيتشرى معاه بشكل واضح</div>' + f'<div class="note">الأكتر طلباً عندنا:</div><div class="chips">{chips}</div>')
 
-        html('<div class="sec">🎁 الباقات المقترحة</div>')
-        bnd = bundles(pid)
-        if bnd:
-            for b in bnd:
-                chips = '<span class="plus">+</span>'.join(f'<span class="chip">{ltr(n)}</span>' for n in b['items'])
-                saved = b['regular'] - b['offer']
-                html(
-                    f'<div class="card"><div class="chips">{chips}</div>'
-                    f'<div class="price"><span class="old">{money(b["regular"])}</span><span class="new">{money(b["offer"])}</span>'
-                    f'<span class="save">وفّر {money(saved)} ({pct(b["discount"])})</span></div>'
-                    f'<div class="note">بيتشتروا مع بعض في {pct(b["share"])} من فواتير {ltr(names[pid])}</div></div>'
-                )
-            html('<div class="note">السعر بعد الخصم تقدير مبني على متوسط الخصم اللي اتعمل فعلاً على المنتجات دي</div>')
-        else:
-            html('<div class="msg">مفيش باقة واضحة للمنتج ده</div>')
-
-        o = offer(pid)
-        html('<div class="sec">🏷️ العروض</div>')
-        html(f'<div class="card">المنتج ده بيتباع بخصم في حوالي {pct(o["share"])} من المرات، ومتوسط الخصم {pct(o["avg"])}</div>')
+if mode == MODES[0]:
+    cat = st.selectbox('الفئة', ['كل الفئات'] + categories())
+    pids = products_in(None if cat == 'كل الفئات' else cat)
+    pid = st.selectbox('اختار المنتج (تقدر تكتب للبحث)', pids, index=None, format_func=lambda p: names[p], placeholder='اكتب اسم المنتج أو اختاره')
+    if pid:
+        show_product(pid)
+elif mode == MODES[1]:
+    img_file = st.camera_input("صوّر المنتج")
+    if img_file is not None:
+        recognize(img_file)
+else:
+    img_file = st.file_uploader("ارفع صورة المنتج", type=["jpg", "jpeg", "png", "webp"])
+    if img_file is not None:
+        recognize(img_file)
