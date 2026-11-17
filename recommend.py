@@ -18,11 +18,6 @@ def suggestions(product_id):
     return [{'name': x['Suggested'], 'share': float(x['Confidence'])} for _, x in r.iterrows()]
 
 
-def offer(product_id):
-    o = off.loc[product_id]
-    return {'share': float(o['Discount_Share']), 'avg': float(o['Avg_Discount'])}
-
-
 def bundles(product_id):
     out = []
     for _, b in bun[bun['Product_ID'] == product_id].iterrows():
@@ -34,6 +29,7 @@ def bundles(product_id):
             'discount': float(b['Suggested_Discount']),
         })
     return out
+
 
 
 def categories():
@@ -143,3 +139,12 @@ def hook(product_id):
             'discount': HOOK_DISCOUNT,
         })
     return out
+
+
+def category_view(product_id):
+    cat = catalog.loc[product_id, 'Category']
+    ids = [p for p in catalog[catalog['Category'] == cat].index if p not in HIDDEN]
+    ranked = sorted(ids, key=lambda p: -float(off.loc[p, 'Lines']))
+    rank = ranked.index(product_id) + 1
+    alts = [{'name': catalog.loc[p, 'Product'], 'price': float(catalog.loc[p, 'Price'])} for p in ranked if p != product_id][:3]
+    return {'category': cat, 'rank': rank, 'total': len(ranked), 'alts': alts}

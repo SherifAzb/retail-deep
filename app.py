@@ -6,7 +6,7 @@ from PIL import Image
 from google import genai
 from google.genai import types
 from matcher import ask_gemini, decide
-from recommend import names, suggestions, bundles, offer, top_sellers, categories, products_in, info, image, emoji, hook
+from recommend import names, suggestions, bundles, top_sellers, categories, products_in, info, image, emoji, hook, category_view
 
 st.set_page_config(page_title="RetailDeep", page_icon="🛒", layout="centered")
 
@@ -150,9 +150,13 @@ def show_product(pid):
         else:
             html('<div class="msg">مفيش باقة واضحة للمنتج ده</div>')
 
-    o = offer(pid)
-    html('<div class="sec">🏷️ العروض</div>')
-    html(f'<div class="card">المنتج ده بيتباع بخصم في حوالي {pct(o["share"])} من المرات، ومتوسط الخصم {pct(o["avg"])}</div>')
+    cv = category_view(pid)
+    html('<div class="sec">📊 المنتج ده في فئته</div>')
+    rows = ''.join(f'<div class="row"><div class="nm">{ltr(x["name"])}</div><div class="pct" style="flex:0 0 auto">{money(x["price"])}</div></div>' for x in cv['alts'])
+    html(
+        f'<div class="card">رقم <b>{ltr(cv["rank"])}</b> في الأكتر طلباً من {ltr(cv["total"])} منتج في {ltr(cv["category"])}</div>'
+        '<div class="note" style="margin:6px 0">بدائل في نفس الفئة:</div>' + rows
+    )
 
 
 MODES = ['🛒 اختار من القايمة', '📷 كاميرا', '📁 رفع صورة']
