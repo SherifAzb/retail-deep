@@ -1,5 +1,8 @@
 import os
+import re
+from collections import defaultdict
 import pandas as pd
+from related import GROUPS
 
 rec = pd.read_csv('product_recommendations.csv')
 off = pd.read_csv('product_offers.csv').set_index('Product_ID')
@@ -99,3 +102,44 @@ def emoji(product_id):
         if k in name:
             return e
     return CAT_EMOJI.get(catalog.loc[product_id, 'Category'], '🛒')
+
+
+HOOK_DISCOUNT = 0.10
+HOOK_PICKS = 3
+_STOP = {'pack', 'pc', 'pk', 'jar', 'can', 'box', 'bag', 'tub', 'bags', 'the', 'and'}
+_rel = defaultdict(lambda: defaultdict(int))
+for _g in GROUPS:
+    for _a in _g:
+        for _b in _g:
+            if _a != _b:
+                _rel[_a][_b] += 1
+
+
+def _tokens(name):
+    return {w for w in re.findall(r'[a-z]+', name.lower()) if w not in _STOP and len(w) > 2}
+
+
+def hook(product_id):
+    me = catalog.loc[product_id]
+    my_tokens = _tokens(me['Product'])
+    top = float(off['Lines'].max())
+    scored = []
+    for pid, shared in _rel[product_id].items():
+        if pid in HIDDEN or pid not in catalog.index:
+            continue
+        c = catalog.loc[pid]
+        if my_tokens & _tokens(c['Product']):
+            continue
+        score = shared * 3 + float(off.loc[pid, 'Lines']) / top * 2
+        scored.append((score, float(c['Price']), pid))
+    scored.sort(reverse=True)
+    out = []
+    for _, price, pid in scored[:HOOK_PICKS]:
+        out.append({
+            'id': pid,
+            'name': catalog.loc[pid, 'Product'],
+            'price': price,
+            'offer': round(price * (1 - HOOK_DISCOUNT), 2),
+            'discount': HOOK_DISCOUNT,
+        })
+    return out

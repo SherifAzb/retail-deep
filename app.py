@@ -6,7 +6,7 @@ from PIL import Image
 from google import genai
 from google.genai import types
 from matcher import ask_gemini, decide
-from recommend import names, suggestions, bundles, offer, top_sellers, categories, products_in, info, image, emoji
+from recommend import names, suggestions, bundles, offer, top_sellers, categories, products_in, info, image, emoji, hook
 
 st.set_page_config(page_title="RetailDeep", page_icon="🛒", layout="centered")
 
@@ -36,6 +36,10 @@ CSS = """
 .rd .note{opacity:.7;font-size:.85rem;margin-top:8px}
 .rd .msg{border-radius:12px;padding:14px 18px;margin:14px 0;border:1px solid rgba(128,128,128,.3);background:rgba(128,128,128,.12)}
 .rd .msg.warn{border-color:rgba(240,165,0,.5);background:rgba(240,165,0,.12)}
+.rd .hook{border:2px dashed #f0a500;border-radius:16px;padding:16px 20px;margin:8px 0;background:linear-gradient(135deg,rgba(240,165,0,.18),rgba(240,165,0,.04))}
+.rd .hook .hd{font-size:1.25rem;font-weight:700}
+.rd .hook .sb{opacity:.8;margin-top:2px}
+.rd .hook .you{display:inline-block;background:#f0a500;color:#000;padding:1px 12px;border-radius:99px;font-weight:700;font-size:.85rem;margin-bottom:6px}
 div[data-testid="stWidgetLabel"] p{text-align:right;width:100%;direction:rtl}
 .rd .msg.err{border-color:rgba(230,60,60,.5);background:rgba(230,60,60,.12)}
 </style>
@@ -123,7 +127,28 @@ def show_product(pid):
             )
         html('<div class="note">السعر بعد الخصم تقدير مبني على متوسط الخصم اللي اتعمل فعلاً على المنتجات دي</div>')
     else:
-        html('<div class="msg">مفيش باقة واضحة للمنتج ده</div>')
+        h = hook(pid)
+        if h:
+            html(
+                '<div class="hook"><span class="you">🎯 خاص بيك إنت</span>'
+                f'<div class="hd">اختار منتج واحد من دول وخده بخصم مع {ltr(names[pid])}</div>'
+                '<div class="sb">العرض شغال طول ما المنتجين في نفس الطلب</div></div>'
+            )
+            ids = [x['id'] for x in h]
+            by_id = {x['id']: x for x in h}
+            pick = st.radio('اختار منتجك', ids, horizontal=True, key=f'hook_{pid}', label_visibility='collapsed',
+                            format_func=lambda i: f"{by_id[i]['name']}  ·  {by_id[i]['price']:,.0f} ← {by_id[i]['offer']:,.0f} ج")
+            x = by_id[pick]
+            base = info(pid)['price']
+            saved = x['price'] - x['offer']
+            html(
+                f'<div class="card"><div class="chips"><span class="chip">{ltr(names[pid])}</span><span class="plus">+</span><span class="chip">{ltr(x["name"])}</span></div>'
+                f'<div class="price"><span class="old">{money(base + x["price"])}</span><span class="new">{money(base + x["offer"])}</span>'
+                f'<span class="save">وفّر {money(saved)} ({pct(x["discount"])})</span></div>'
+                f'<div class="note">الخصم على {ltr(x["name"])} لما تاخده مع {ltr(names[pid])}</div></div>'
+            )
+        else:
+            html('<div class="msg">مفيش باقة واضحة للمنتج ده</div>')
 
     o = offer(pid)
     html('<div class="sec">🏷️ العروض</div>')
