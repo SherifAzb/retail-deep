@@ -10,7 +10,7 @@ from recommend import answer, names
 st.set_page_config(page_title="RetailDeep", layout="centered")
 st.title("🛒 RetailDeep Assistant")
 
-MODEL = ' gemini-2.5-pro'
+MODEL = 'gemini-1.5-flash'
 MIN_CONFIDENCE = 0.6
 ALIASES = {'P035': 'P034'}
 
